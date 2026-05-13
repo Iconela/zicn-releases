@@ -114,17 +114,30 @@ def upsert_release(manifest: dict, entry: dict) -> dict:
     preserved from the existing entry if present — so a human-curated manifest
     survives subsequent automated runs.
     """
+    def is_pending(sha: str) -> bool:
+        return str(sha or "").startswith("PENDING")
+
+    def is_placeholder_highlights(hl: list) -> bool:
+        if not hl: return True
+        if len(hl) == 1 and ("see release notes" in hl[0].lower() or "release notes at" in hl[0].lower()):
+            return True
+        return False
+
     existing = next((r for r in manifest["releases"] if r["version"] == entry["version"]), None)
     if existing:
         merged = {**existing}
-        # Always overwrite file descriptors (real hashes/sizes/urls from release)
-        merged["files"] = entry["files"]
+        # Overwrite file descriptors ONLY if new entry has real hashes.
+        # Otherwise keep existing real hashes (protects against transient
+        # GitHub Releases lookup failures during the auto-publish workflow).
+        new_sha = entry.get("files", {}).get("cofile", {}).get("sha256", "")
+        if not is_pending(new_sha):
+            merged["files"] = entry["files"]
         merged["releaseNotesUrl"] = entry["releaseNotesUrl"]
         # Update releasedAt only if existing was a placeholder
         if not existing.get("releasedAt") or existing.get("releasedAt") == "PENDING":
             merged["releasedAt"] = entry["releasedAt"]
-        # Preserve curated metadata when new entry has defaults/empty values
-        if entry.get("highlights"):
+        # Preserve curated highlights when new entry is empty or placeholder
+        if entry.get("highlights") and not is_placeholder_highlights(entry["highlights"]):
             merged["highlights"] = entry["highlights"]
         if entry.get("buildLabel"):
             merged["buildLabel"] = entry["buildLabel"]

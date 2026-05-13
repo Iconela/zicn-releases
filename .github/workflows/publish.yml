@@ -42,11 +42,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Note: NO --highlights here — gen_manifest.py preserves curated
+          # highlights that were committed manually. Channel is also omitted
+          # so an existing rc/beta entry isn't silently promoted to stable.
           python scripts/gen_manifest.py \
             --from-release "${{ steps.meta.outputs.tag }}" \
-            --tr "${{ steps.meta.outputs.tr }}" \
-            --channel stable \
-            --highlights "see release notes at ${{ github.event.release.html_url }}"
+            --tr "${{ steps.meta.outputs.tr }}"
 
       - name: Commit + push manifest
         run: |
