@@ -1,0 +1,19 @@
+# Local-only artifacts
+.tmp_assets/
+*.swp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# PowerShell
+*.ps1xml.bak
+
+# Editor
+.vscode/
+.idea/

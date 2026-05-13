@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "product": "zicn",
+  "publisher": "Iconela",
+  "publishedAt": "2026-05-13T00:00:00Z",
+  "latest": "0.21.0",
+  "channels": ["stable", "beta", "rc"],
+  "releases": [
+    {
+      "version": "0.21.0",
+      "channel": "stable",
+      "releasedAt": "2026-05-13",
+      "tr": "Q01K905330",
+      "buildLabel": "sprint5.phase3.spro-dump+cockpit-v1",
+      "minZicnVersion": "0.18.0",
+      "compat": {
+        "sapSystem": ["ECC 6.0 EHP7+", "S/4HANA 1909+"],
+        "abapPlatform": ">=7.40"
+      },
+      "highlights": [
+        "NEW: Cockpit web UI (Dashboard / Logs / Updates / Tools)",
+        "NEW: V2 auth mode (ZICN_CL_AUTH_NULL) - relies on SAP-native authorization",
+        "FIX (CRITICAL): pre-flight syntax check prevents activating ABAP code with syntax errors",
+        "FIX: pre-flight skips for INCLUDE / class-include / interface-include / type-pool subc",
+        "FIX: cockpit JS API constant resolves dynamically (no double /v1)"
+      ],
+      "breaking": false,
+      "files": {
+        "cofile": {
+          "url": "https://github.com/Iconela/zicn-releases/releases/download/v0.21.0/K905330.Q01",
+          "size": 0,
+          "sha256": "PENDING_FIRST_RELEASE"
+        },
+        "datafile": {
+          "url": "https://github.com/Iconela/zicn-releases/releases/download/v0.21.0/R905330.Q01",
+          "size": 0,
+          "sha256": "PENDING_FIRST_RELEASE"
+        }
+      },
+      "releaseNotesUrl": "https://github.com/Iconela/zicn-releases/releases/tag/v0.21.0"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+name: Publish ZICN release
+
+# Trigger: when a release is published manually via the GitHub UI or via `gh release create`.
+# Assets (cofile + datafile) are uploaded with the release; this workflow then regenerates
+# manifest.json with real SHA-256 hashes and commits it back to main.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write   # to commit the updated manifest
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Derive release metadata
+        id: meta
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Extract TR from the release body (line starting with **TR**: `Q01K...`)
+          TR=$(echo '${{ github.event.release.body }}' | grep -oE 'Q0[0-9][A-Z][0-9]{6}' | head -n1)
+          echo "tr=$TR" >> "$GITHUB_OUTPUT"
+          echo "ZICN release: v$VERSION (TR=$TR)"
+
+      - name: Regenerate manifest with real hashes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/gen_manifest.py \
+            --from-release "${{ steps.meta.outputs.tag }}" \
+            --tr "${{ steps.meta.outputs.tr }}" \
+            --channel stable \
+            --highlights "see release notes at ${{ github.event.release.html_url }}"
+
+      - name: Commit + push manifest
+        run: |
+          git config user.name  "iconela-bot"
+          git config user.email "bot@iconela.ai"
+          if git diff --quiet manifest.json; then
+            echo "No manifest changes - skipping commit"
+          else
+            git add manifest.json
+            git commit -m "chore: update manifest for ${{ steps.meta.outputs.tag }}"
+            git push origin main
+          fi
