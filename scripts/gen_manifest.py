@@ -106,11 +106,51 @@ def load_manifest() -> dict:
 
 
 def upsert_release(manifest: dict, entry: dict) -> dict:
+    """Merge new entry into manifest, preserving existing curated metadata.
+
+    Files (url/size/sha256) are always taken from the new entry (this is what
+    the GH Action computes from real release assets). Other fields like
+    highlights, buildLabel, breaking, minZicnVersion, compat, channel are
+    preserved from the existing entry if present — so a human-curated manifest
+    survives subsequent automated runs.
+    """
+    existing = next((r for r in manifest["releases"] if r["version"] == entry["version"]), None)
+    if existing:
+        merged = {**existing}
+        # Always overwrite file descriptors (real hashes/sizes/urls from release)
+        merged["files"] = entry["files"]
+        merged["releaseNotesUrl"] = entry["releaseNotesUrl"]
+        # Update releasedAt only if existing was a placeholder
+        if not existing.get("releasedAt") or existing.get("releasedAt") == "PENDING":
+            merged["releasedAt"] = entry["releasedAt"]
+        # Preserve curated metadata when new entry has defaults/empty values
+        if entry.get("highlights"):
+            merged["highlights"] = entry["highlights"]
+        if entry.get("buildLabel"):
+            merged["buildLabel"] = entry["buildLabel"]
+        if entry.get("breaking"):
+            merged["breaking"] = entry["breaking"]
+        if entry.get("minZicnVersion") and entry["minZicnVersion"] != "0.18.0":
+            merged["minZicnVersion"] = entry["minZicnVersion"]
+        if entry.get("tr"):
+            merged["tr"] = entry["tr"]
+        # Channel: don't downgrade rc/beta to stable unless explicitly set
+        if entry.get("channel") and entry["channel"] != "stable":
+            merged["channel"] = entry["channel"]
+        elif not existing.get("channel"):
+            merged["channel"] = entry["channel"]
+        entry = merged
+
     rels = [r for r in manifest["releases"] if r["version"] != entry["version"]]
     rels.append(entry)
     rels.sort(key=lambda r: semver_key(r["version"]), reverse=True)
     manifest["releases"] = rels
-    stable = [r for r in rels if r.get("channel") == "stable"]
+    # latest = highest stable-channel version with real (non-PENDING) hashes
+    stable = [
+        r for r in rels
+        if r.get("channel") == "stable"
+        and not str(r.get("files", {}).get("cofile", {}).get("sha256", "")).startswith("PENDING")
+    ]
     if stable:
         manifest["latest"] = stable[0]["version"]
     manifest["publishedAt"] = dt.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
